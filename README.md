@@ -35,3 +35,19 @@ If you are using this code for your research, you can cite the corresponding pap
   organization={IEEE}
 }
 ```
+
+## Simple cmd's for Fabian
+
+`watch -n1 nvidia-smi`
+- export environment: `pip freeze > requirements.txt`
+- read environment: `pip install -r requirements.txt`
+- show the GPU workload:
+`watch -n 0.5 nvidia-smi`
+- show available versions for tensorflow:
+`pip install tensorflow==`
+- install version 1.12:
+`pip install tensorflow==1.12.0`
+- check if gpu is supported by tensorflow version:
+`python`
+`import tensorflow as tf`
+`sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))`

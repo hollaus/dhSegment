@@ -1,0 +1,26 @@
+{
+  "training_params" : {
+      "learning_rate": 5e-5,
+      "batch_size": 1,
+      "make_patches": false,
+      "training_margin" : 0,
+      "n_epochs": 5,
+      "data_augmentation" : true,
+      "data_augmentation_max_rotation" : 0.2,
+      "data_augmentation_max_scaling" : 0.2,
+      "data_augmentation_flip_lr": true,
+      "data_augmentation_flip_ud": true,
+      "data_augmentation_color": false,
+      "evaluate_every_epoch" : 5
+  },
+
+  "pretrained_model_name" : "resnet50",
+  "prediction_type": "CLASSIFICATION",
+  "train_data" : "binarization/training_ms_tex/single_channel",
+  "eval_data" : "binarization/training_ms_tex/single_channel",
+  "classes_file" : "binarization/classes.txt",
+  "model_output_dir" : "binarization/model_ms_tex/single_channel/resnet_50_pb_try",
+  "restore_model" : true,
+  "gpu" : "3"
+
+}

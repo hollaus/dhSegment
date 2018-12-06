@@ -6,6 +6,7 @@ from .. import utils
 from tqdm import tqdm
 from typing import Union, List
 from enum import Enum
+import re
 import pandas as pd
 from .input_utils import data_augmentation_fn, extract_patches_fn, load_and_resize_image, \
     rotate_crop, resize_image, local_entropy
@@ -19,7 +20,7 @@ class InputCase(Enum):
 
 def input_fn(input_data: Union[str, List[str]], params: dict, input_label_dir: str=None,
              data_augmentation: bool=False, batch_size: int=5, make_patches: bool=False, num_epochs: int=1,
-             num_threads: int=4, image_summaries: bool=False):
+             num_threads: int=4, image_summaries: bool=False, use_ms: bool=False):
     """
     Input_fn for estimator
     
@@ -63,7 +64,9 @@ def input_fn(input_data: Union[str, List[str]], params: dict, input_label_dir: s
             label_image = load_and_resize_image(label_filename, 1, new_size, interpolation='NEAREST')
         else:
             raise NotImplementedError
-        input_image = load_and_resize_image(image_filename, 3, new_size)
+        
+        # TODO: change by fabian: not sure which interpolation to use:
+        input_image = load_and_resize_image(image_filename, 3, new_size, interpolation='NEAREST', use_ms=True)
         return input_image, label_image
 
     # Data augmentation, patching
@@ -92,6 +95,7 @@ def input_fn(input_data: Union[str, List[str]], params: dict, input_label_dir: s
             with tf.name_scope('formatting'):
                 batch_image = tf.expand_dims(input_image, axis=0)
                 batch_label = tf.expand_dims(label_image, axis=0)
+
         return tf.data.Dataset.from_tensor_slices((batch_image, batch_label))
 
     # Data augmentation
@@ -122,10 +126,24 @@ def input_fn(input_data: Union[str, List[str]], params: dict, input_label_dir: s
 
     elif os.path.isdir(input_data):
         input_case = InputCase.INPUT_DIR
-        input_image_filenames = glob(os.path.join(input_data, '**', '*.jpg'),
-                                     recursive=True) + \
+        # TODO: changed by fabian, think about a proper way...
+        use_ms = True
+        if use_ms:
+            input_image_filenames = glob(os.path.join(input_data, '*.jpg'),
+                            recursive=False) + \
+                        glob(os.path.join(input_data, '*.png'),
+                            recursive=False)
+            input_image_filenames = [re.sub(r'_\d', '', f) for f in input_image_filenames]
+            input_image_filenames = set(input_image_filenames)
+            print(input_image_filenames)
+
+        else:
+            input_image_filenames = glob(os.path.join(input_data, '**', '*.jpg'),
+                                    recursive=True) + \
                                 glob(os.path.join(input_data, '**', '*.png'),
-                                     recursive=True)
+                                    recursive=True)
+            print(input_image_filenames)
+        
         print('Found {} images'.format(len(input_image_filenames)))
 
     elif os.path.isfile(input_data) and \
@@ -156,17 +174,19 @@ def input_fn(input_data: Union[str, List[str]], params: dict, input_label_dir: s
             label_image_filenames = list(df.labels.values)
             has_labelled_data = True
 
-    # Checks that all image files can be found
-    for img_filename in input_image_filenames:
-        if not os.path.exists(img_filename):
-            raise FileNotFoundError(img_filename)
-    if has_labelled_data:
-        for img_filename in input_image_filenames:
-            if not os.path.exists(img_filename):
-                raise FileNotFoundError(img_filename)
+    # TODO: changed by fabian - maybe replace this check if the files are existing!
+    # # Checks that all image files can be found
+    # for img_filename in input_image_filenames:
+    #     if not os.path.exists(img_filename):
+    #         raise FileNotFoundError(img_filename)
+    # if has_labelled_data:
+    #     for img_filename in input_image_filenames:
+    #         if not os.path.exists(img_filename):
+    #             raise FileNotFoundError(img_filename)
 
     # Tensorflow input_fn
     def fn():
+        print(fn)
         if not has_labelled_data:
             encoded_filenames = [f.encode() for f in input_image_filenames]
             dataset = tf.data.Dataset.from_generator(lambda: tqdm(encoded_filenames, desc='Dataset'),
@@ -197,7 +217,10 @@ def input_fn(input_data: Union[str, List[str]], params: dict, input_label_dir: s
             base_shape_images = [-1, -1]
         # Pad things
         padded_shapes = {
-            'images': base_shape_images + [3],
+            # TODO: change by fabian: we need to find something generic:
+            'images': base_shape_images + [6],
+            # This was the original line:
+            # 'images': base_shape_images + [3],
             'shapes': [2]
         }
         if 'labels' in dataset.output_shapes.keys():
@@ -210,39 +233,68 @@ def input_fn(input_data: Union[str, List[str]], params: dict, input_label_dir: s
         prepared_batch = dataset.make_one_shot_iterator().get_next()
 
         # Summaries for checking that the loading and data augmentation goes fine
-        if image_summaries:
-            shape_summary_img = tf.cast(tf.shape(prepared_batch['images'])[1:3] / 3, tf.int32)
-            tf.summary.image('input/image',
-                             tf.image.resize_images(prepared_batch['images'], shape_summary_img),
-                             max_outputs=1)
-            if 'labels' in prepared_batch:
-                label_export = prepared_batch['labels']
-                if prediction_type == utils.PredictionType.CLASSIFICATION:
-                    label_export = utils.class_to_label_image(label_export, classes_file)
-                if prediction_type == utils.PredictionType.MULTILABEL:
-                    label_export = tf.cast(label_export, tf.int32)
-                    label_export = utils.multiclass_to_label_image(label_export, classes_file)
-                tf.summary.image('input/label',
-                                 tf.image.resize_images(label_export, shape_summary_img), max_outputs=1)
-            if 'weight_maps' in prepared_batch:
-                tf.summary.image('input/weight_map',
-                                 tf.image.resize_images(prepared_batch['weight_maps'][:, :, :, None],
-                                                        shape_summary_img),
-                                 max_outputs=1)
+        # TODO: change by fabian: the length of the tensors is not right
+        # if image_summaries:
+        #     shape_summary_img = tf.cast(tf.shape(prepared_batch['images'])[1:3] / 3, tf.int32)
+        #     tf.summary.image('input/image',
+        #                      tf.image.resize_images(prepared_batch['images'], shape_summary_img),
+        #                      max_outputs=1)
+        #     if 'labels' in prepared_batch:
+        #         label_export = prepared_batch['labels']
+        #         if prediction_type == utils.PredictionType.CLASSIFICATION:
+        #             label_export = utils.class_to_label_image(label_export, classes_file)
+        #         if prediction_type == utils.PredictionType.MULTILABEL:
+        #             label_export = tf.cast(label_export, tf.int32)
+        #             label_export = utils.multiclass_to_label_image(label_export, classes_file)
+        #         tf.summary.image('input/label',
+        #                          tf.image.resize_images(label_export, shape_summary_img), max_outputs=1)
+        #     if 'weight_maps' in prepared_batch:
+        #         tf.summary.image('input/weight_map',
+        #                          tf.image.resize_images(prepared_batch['weight_maps'][:, :, :, None],
+        #                                                 shape_summary_img),
+        #                          max_outputs=1)
 
         return prepared_batch, prepared_batch.get('labels')
 
     return fn
 
 
-def serving_input_filename(resized_size):
+def serving_input_filename(resized_size, use_ms: bool=False):
+    print('test!!!!!!')
     def serving_input_fn():
+        print('new serving_input_fn')
         # define placeholder for filename
         filename = tf.placeholder(dtype=tf.string)
 
         # TODO : make it batch-compatible (with Dataset or string input producer)
-        decoded_image = tf.to_float(tf.image.decode_jpeg(tf.read_file(filename), channels=3,
+        
+        if use_ms:
+            first_channel = True
+            for i in range(2, 8):
+                channelname = tf.regex_replace(filename, '.png', '_' + str(i) + '.png')
+                decoded_channel = tf.to_float(tf.image.decode_jpeg(tf.read_file(channelname), channels=1,
+                                                            try_recover_truncated=True))
+                if first_channel:
+                    decoded_image = decoded_channel
+                    first_channel = False
+                else:
+                    decoded_image = tf.concat([decoded_image, decoded_channel], 2)
+
+            # filename = tf.regex_replace(filename, '.png', '_1.png')
+            # decoded_image = tf.to_float(tf.image.decode_jpeg(tf.read_file(filename), channels=3,
+            #                                              try_recover_truncated=True))
+            # # TODO: change by fabian - fill in here a real MS data loader:
+            # decoded_image = tf.concat([decoded_image, decoded_image], 2)
+        else:        
+            decoded_image = tf.to_float(tf.image.decode_jpeg(tf.read_file(filename), channels=3,
                                                          try_recover_truncated=True))
+
+        # decoded_image = tf.to_float(tf.image.decode_jpeg(tf.read_file(test), channels=3,
+        #                                                  try_recover_truncated=True))
+        # # TODO: change by fabian - fill in here a real MS data loader:
+        # if use_ms:
+        #     decoded_image = tf.concat([decoded_image, decoded_image], 2)
+
         original_shape = tf.shape(decoded_image)[:2]
 
         if resized_size is not None and resized_size > 0:

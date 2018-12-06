@@ -26,5 +26,5 @@
   },
   "pretrained_model_name" : "resnet50",
   "prediction_type": "CLASSIFICATION",
-  "gpu" : "0"
+  "gpu" : "1"
 }
