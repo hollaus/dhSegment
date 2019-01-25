@@ -74,7 +74,11 @@ class VGG16ModelParams:
 
 class ResNetModelParams:
     # PRETRAINED_MODEL_FILE = 'pretrained_models/resnet_v1_50.ckpt'
-    PRETRAINED_MODEL_FILE = 'pretrained_models/mod_ressssnet_v1_50.ckpt'
+    # PRETRAINED_MODEL_FILE = 'pretrained_models/msbin_resnet_v1_50.ckpt'
+        # PRETRAINED_MODEL_FILE = 'pretrained_models/model_try/resnet_slim_test.ckpt'
+    PRETRAINED_MODEL_FILE = 'pretrained_models/msbin_resnet_v1_50.ckpt'
+    # PRETRAINED_MODEL_FILE = 'pretrained_models/model_try/mod_resnet_v1_50.ckpt'
+    # PRETRAINED_MODEL_FILE = 'pretrained_models/resnet_v1_50.ckpt'
     INTERMEDIATE_CONV = None
     UPSCALE_PARAMS = [
         # (Filter size (depth bottleneck's output), number of bottleneck)
@@ -125,6 +129,7 @@ class ModelParams(BaseParams):
             raise NotImplementedError
 
         self.pretrained_model_file = kwargs.get('pretrained_model_file', model_class.PRETRAINED_MODEL_FILE)
+        self.pretrained_model_file = kwargs.get('pretrained_model_file', 'xxx')
         self.intermediate_conv = kwargs.get('intermediate_conv', model_class.INTERMEDIATE_CONV)
         self.upscale_params = kwargs.get('upscale_params', model_class.UPSCALE_PARAMS)
         self.selected_levels_upscaling = kwargs.get('selected_levels_upscaling', model_class.SELECTED_LAYERS_UPSCALING)
@@ -142,11 +147,11 @@ class ModelParams(BaseParams):
                 '{} != {}'.format(len(self.upscale_params),
                                   len(self.selected_levels_upscaling))
 
-            # assert os.path.isfile(self.pretrained_model_file), \
-            #     'Pretrained weights file {} not found'.format(self.pretrained_model_file)
-            if not os.path.isfile(self.pretrained_model_file):
-                warnings.warn('WARNING - Default pretrained weights file in {} was not found. '
-                              'Have you changed the default pretrained file ?'.format(self.pretrained_model_file))
+            # # assert os.path.isfile(self.pretrained_model_file), \
+            # #     'Pretrained weights file {} not found'.format(self.pretrained_model_file)
+            # if not os.path.isfile(self.pretrained_model_file):
+            #     warnings.warn('WARNING - Default pretrained weights file in {} was not found. '
+            #                   'Have you changed the default pretrained file ?'.format(self.pretrained_model_file))
 
 
 class TrainingParams(BaseParams):
@@ -213,6 +218,7 @@ class TrainingParams(BaseParams):
         self.local_entropy_ratio = kwargs.get('local_entropy_ratio', 0.)
         self.local_entropy_sigma = kwargs.get('local_entropy_sigma', 3)
         self.focal_loss_gamma = kwargs.get('focal_loss_gamma', 0.)
+        # self.pretrained_model_file = kwargs.get('pretrained_model_file', 'xxx')
 
     def check_params(self) -> None:
         """Checks if there is no parameter inconsistency

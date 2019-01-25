@@ -9,12 +9,12 @@ flags.DEFINE_string('input_path',
                     'pretrained_models/model_try/resnet_v1_50.ckpt',
                     'path of pretrained_checkpoint')
 flags.DEFINE_string('output_path',
-                    'pretrained_models/model_try/mod_2_resnet_v1_50.ckpt',
+                    'pretrained_models/model_try/resnet_12_channels.ckpt',
                     'output checkpoint')
 flags.DEFINE_string('feature_extractor', 'resnet_v1_50',
                     'name of first checkpoint')
 flags.DEFINE_string(
-    'num_input_channels', "6",
+    'num_input_channels', "12",
     'number of input channel. Each image, background, diff image require 3 channels'
 )
 flags.DEFINE_string(

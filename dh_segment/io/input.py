@@ -133,7 +133,9 @@ def input_fn(input_data: Union[str, List[str]], params: dict, input_label_dir: s
                             recursive=False) + \
                         glob(os.path.join(input_data, '*.png'),
                             recursive=False)
-            input_image_filenames = [re.sub(r'_\d', '', f) for f in input_image_filenames]
+            # this is used for msbin:
+            input_image_filenames = [re.sub(r'_\d\d?', '', f) for f in input_image_filenames]                            
+            # input_image_filenames = [re.sub(r'_\d', '', f) for f in input_image_filenames]
             input_image_filenames = set(input_image_filenames)
             print(input_image_filenames)
 
@@ -218,10 +220,12 @@ def input_fn(input_data: Union[str, List[str]], params: dict, input_label_dir: s
         # Pad things
         padded_shapes = {
             # TODO: change by fabian: we need to find something generic:
-            'images': base_shape_images + [6],
+            # this is used for msbin:
+            'images': base_shape_images + [12] ,
+            # 'images': base_shape_images + [6],
             # This was the original line:
             # 'images': base_shape_images + [3],
-            'shapes': [2]
+            'shapes': [2],
         }
         if 'labels' in dataset.output_shapes.keys():
             output_shapes_label = dataset.output_shapes['labels']
@@ -267,10 +271,13 @@ def serving_input_filename(resized_size, use_ms: bool=False):
         filename = tf.placeholder(dtype=tf.string)
 
         # TODO : make it batch-compatible (with Dataset or string input producer)
-        
+                
         if use_ms:
             first_channel = True
-            for i in range(2, 8):
+            # this is used for msbin:
+            for i in range(0, 12):
+            # this is used for ms-tex:
+            # for i in range(2, 8):
                 channelname = tf.regex_replace(filename, '.png', '_' + str(i) + '.png')
                 decoded_channel = tf.to_float(tf.image.decode_jpeg(tf.read_file(channelname), channels=1,
                                                             try_recover_truncated=True))

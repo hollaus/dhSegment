@@ -17,5 +17,6 @@ if __name__ == '__main__':
     # os.environ['CUDA_VISIBLE_DEVICES'] = "3"
 
     # print_tensors_in_checkpoint_file(input_path, all_tensors=False, tensor_name='')
-    print_tensors_in_checkpoint_file(input_path, all_tensors=False, tensor_name='resnet_v1_50/mean_rgb')
+    # print_tensors_in_checkpoint_file(input_path, all_tensors=False, tensor_name='resnet_v1_50/mean_rgb')
     # print_tensors_in_checkpoint_file(input_path, all_tensors=False, tensor_name='resnet_v1_50/conv1/weights/Momentum')
+    print_tensors_in_checkpoint_file(input_path, '', all_tensors=False)

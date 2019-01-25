@@ -4,7 +4,10 @@ from tensorflow.contrib.slim import nets
 import numpy as np
 
 # _VGG_MEANS = [123.68, 116.78, 103.94]
-_VGG_MEANS = [123.68, 116.78, 103.94, 123.68, 116.78, 103.94]
+# this is used for msbin:
+_VGG_MEANS = [123.68, 116.78, 103.94, 123.68, 116.78, 103.94, 123.68, 116.78, 103.94, 123.68, 116.78, 103.94]
+# this is used for ms-tex:
+# _VGG_MEANS = [123.68, 116.78, 103.94, 123.68, 116.78, 103.94]
 
 
 def mean_substraction(input_tensor, means=_VGG_MEANS):

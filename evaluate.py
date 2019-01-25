@@ -31,9 +31,11 @@ if __name__ == '__main__':
     mask_unused_gpus.mask_unused_gpus(2)
 
     if use_ms:
-        input_path = 'binarization/test_ms_tex/msi/'
-        model_dir = 'binarization/model_ms_tex/msi/' + model_name + '/export/'
-    else:
+        input_path = 'binarization/msbin/data/test/images'
+        model_dir = 'binarization/msbin/models/' + model_name + '/export/'
+        # input_path = 'binarization/test_ms_tex/msi/'
+        # model_dir = 'binarization/model_ms_tex/msi/' + model_name + '/export/'
+   else:
         input_path = 'binarization/test_ms_tex/single_channel/'
         model_dir = 'binarization/model_ms_tex/single_channel/' + model_name + '/export/'
 
@@ -45,7 +47,8 @@ if __name__ == '__main__':
                         recursive=False) + \
                     glob(os.path.join(input_path, '*.png'),
                         recursive=False)
-        input_image_filenames = [re.sub(r'_\d', '', f) for f in input_image_filenames]
+        input_image_filenames = [re.sub(r'_\d\d?', '', f) for f in input_image_filenames]
+        # input_image_filenames = [re.sub(r'_\d', '', f) for f in input_image_filenames]
         input_files = set(input_image_filenames)
 
     else:
@@ -98,8 +101,14 @@ if __name__ == '__main__':
             # Upscale to have full resolution image (cv2 uses (w,h) and not (h,w) for giving shapes)
             bin_upscaled = cv.resize(p.astype(np.uint8, copy=False), tuple(
                 original_shape[::-1]), interpolation=cv.INTER_NEAREST)
+            pred = probs[:, :, 2] * 255
+
+            # Upscale to have full resolution image (cv2 uses (w,h) and not (h,w) for giving shapes)
+            bin_upscaled_red = cv.resize(pred.astype(np.uint8, copy=False), tuple(
+                original_shape[::-1]), interpolation=cv.INTER_NEAREST)                
 
             img[:, :, 1] = bin_upscaled
+            img[:, :, 2] = bin_upscaled_red
 
             pseudo_filename = re.sub(r'.png', 'pseudo.png', filename)
             filename = re.sub(r'_\d.png', '.png', filename)
@@ -107,8 +116,16 @@ if __name__ == '__main__':
             b = (bin_upscaled > 128) * 255
             b = np.array(b, dtype=np.uint8)
 
+            b_red = (bin_upscaled_red > 128) * 255
+            b_red = np.array(b_red, dtype=np.uint8)
+            
+            b_multiclass = np.zeros(img.shape)
+            b_multiclass[:,:,1] = b
+            b_multiclass[:,:,2] = b_red
+
             cv.imwrite(output_dir + os.path.basename(pseudo_filename), img)
-            cv.imwrite(output_dir + os.path.basename(filename), b)
+            cv.imwrite(output_dir + os.path.basename(filename), b_multiclass)
+
 
 
 

@@ -105,9 +105,7 @@ def run(train_data, eval_data, model_output_dir, gpu, training_params, _config, 
     serving_input_fn = input.serving_input_filename(training_params.input_resized_size, use_ms=True)
     exporter = tf.estimator.BestExporter(serving_input_receiver_fn=serving_input_fn, exports_to_keep=2)
 
-    # TODO: changed by fabian -> temporary!
     for i in trange(0, training_params.n_epochs, training_params.evaluate_every_epoch, desc='Evaluated epochs'):
-    # for i in trange(0, 1, 1, desc='test'):
         estimator.train(input.input_fn(train_input,
                                        input_label_dir=train_labels_input,
                                        num_epochs=training_params.evaluate_every_epoch,
@@ -139,6 +137,5 @@ def run(train_data, eval_data, model_output_dir, gpu, training_params, _config, 
         else:
             eval_result = None
 
-        print('exporting')
         exporter.export(estimator, saved_model_dir, checkpoint_path=None, eval_result=eval_result,
                         is_the_final_export=False)

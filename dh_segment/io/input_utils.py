@@ -110,9 +110,23 @@ def load_and_resize_image(filename: str, channels: int, size: int=None, interpol
     """
     with tf.name_scope('load_img'):
 
+        print('load_and_resize_image')
+
         if use_ms:
             first_channel = True
-            for i in range(2, 8):
+            # this is used for msbin:
+            for i in range(0, 12):
+            # this is used for ms-tex:
+            # for i in range(2, 8):
+
+                # TODO: use something like this to find the corresponding image names:
+                # with tf.Session() as session:
+                #     filenames_as_tensor = tf.matching_files("*")
+                #     filenames_as_array = session.run(filenames_as_tensor)
+
+                #     for filename in filenames_as_array:
+                #         print(filename)
+
                 channelname = tf.regex_replace(filename, '.png', '_' + str(i) + '.png')
                 decoded_channel = tf.to_float(tf.image.decode_jpeg(tf.read_file(channelname), channels=1,
                                                             try_recover_truncated=True))
