@@ -98,7 +98,7 @@ def resize_image(image: tf.Tensor, size: int, interpolation: str='BILINEAR') -> 
         }
         return tf.image.resize_images(image, new_shape, method=resize_method[interpolation])
 
-def load_and_resize_image(filename: str, channels: int, size: int=None, interpolation: str='BILINEAR', use_ms: bool=False) -> tf.Tensor:
+def load_and_resize_image(filename: str, channels: int, size: int=None, interpolation: str='BILINEAR', channel_ids: list=(), separator: str=[]) -> tf.Tensor:
     """Loads an image from its filename and resizes it to the desired output size.
 
     :param filename: string tensor
@@ -110,24 +110,13 @@ def load_and_resize_image(filename: str, channels: int, size: int=None, interpol
     """
     with tf.name_scope('load_img'):
 
-        print('load_and_resize_image')
-
-        if use_ms:
+        if not channel_ids:
+            decoded_image = tf.to_float(tf.image.decode_jpeg(tf.read_file(filename), channels=channels,
+                                                try_recover_truncated=True))
+        else:
             first_channel = True
-            # this is used for msbin:
-            for i in range(0, 12):
-            # this is used for ms-tex:
-            # for i in range(2, 8):
-
-                # TODO: use something like this to find the corresponding image names:
-                # with tf.Session() as session:
-                #     filenames_as_tensor = tf.matching_files("*")
-                #     filenames_as_array = session.run(filenames_as_tensor)
-
-                #     for filename in filenames_as_array:
-                #         print(filename)
-
-                channelname = tf.regex_replace(filename, '.png', '_' + str(i) + '.png')
+            for id in channel_ids:
+                channelname = tf.regex_replace(filename, '.png', separator + id + '.png')
                 decoded_channel = tf.to_float(tf.image.decode_jpeg(tf.read_file(channelname), channels=1,
                                                             try_recover_truncated=True))
                 if first_channel:
@@ -135,26 +124,6 @@ def load_and_resize_image(filename: str, channels: int, size: int=None, interpol
                     first_channel = False
                 else:
                     decoded_image = tf.concat([decoded_image, decoded_channel], 2)
-
-            # filename = tf.regex_replace(filename, '.png', '_1.png')
-            # decoded_image = tf.to_float(tf.image.decode_jpeg(tf.read_file(filename), channels=3,
-            #                                              try_recover_truncated=True))
-            # # TODO: change by fabian - fill in here a real MS data loader:
-            # decoded_image = tf.concat([decoded_image, decoded_image], 2)
-        else:        
-            decoded_image = tf.to_float(tf.image.decode_jpeg(tf.read_file(filename), channels=channels,
-                                                         try_recover_truncated=True))
-
-
-        # if use_ms:
-        #     filename = tf.regex_replace(filename, '.png', '_1.png')
-        #     decoded_image = tf.to_float(tf.image.decode_jpeg(tf.read_file(filename), channels=channels,
-        #                                                  try_recover_truncated=True))
-        #     # TODO: change by fabian - fill in here a real MS data loader:
-        #     decoded_image = tf.concat([decoded_image, decoded_image], 2)
-        # else:        
-        #     decoded_image = tf.to_float(tf.image.decode_jpeg(tf.read_file(filename), channels=channels,
-        #                                                  try_recover_truncated=True))
 
         # TODO : if one side is smaller than size of patches (and make patches == true),
         # TODO : force the image to have at least patch size

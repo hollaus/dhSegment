@@ -134,6 +134,7 @@ class ModelParams(BaseParams):
         self.upscale_params = kwargs.get('upscale_params', model_class.UPSCALE_PARAMS)
         self.selected_levels_upscaling = kwargs.get('selected_levels_upscaling', model_class.SELECTED_LAYERS_UPSCALING)
         self.correct_resnet_version = kwargs.get('correct_resnet_version', model_class.CORRECT_VERSION)
+
         self.check_params()
 
     def check_params(self):
@@ -152,6 +153,12 @@ class ModelParams(BaseParams):
             # if not os.path.isfile(self.pretrained_model_file):
             #     warnings.warn('WARNING - Default pretrained weights file in {} was not found. '
             #                   'Have you changed the default pretrained file ?'.format(self.pretrained_model_file))
+
+class MSIParams(BaseParams):
+
+    def __init__(self, **kwargs):
+        self.separator = kwargs.get('separator', '_')
+        self.channel_ids = kwargs.get('channel_ids', ())
 
 
 class TrainingParams(BaseParams):

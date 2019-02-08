@@ -36,9 +36,13 @@ def input_fn(input_data: Union[str, List[str]], params: dict, input_label_dir: s
     :param image_summaries: boolean, whether to make tf.Summary to watch on tensorboard
     :return: fn
     """
+
     training_params = utils.TrainingParams.from_dict(params['training_params'])
     prediction_type = params['prediction_type']
     classes_file = params['classes_file']
+
+    msi_params = utils.MSIParams.from_dict(params['msi_params'])
+    # print('This are our channels: ' + msi_params.channel_ids)
 
     # --- Map functions
     def _make_patches_fn(input_image: tf.Tensor, label_image: tf.Tensor, offsets: tuple) -> (tf.Tensor, tf.Tensor):
@@ -66,7 +70,7 @@ def input_fn(input_data: Union[str, List[str]], params: dict, input_label_dir: s
             raise NotImplementedError
         
         # TODO: change by fabian: not sure which interpolation to use:
-        input_image = load_and_resize_image(image_filename, 3, new_size, interpolation='NEAREST', use_ms=True)
+        input_image = load_and_resize_image(image_filename, 3, new_size, interpolation='NEAREST', channel_ids=msi_params.channel_ids, separator=msi_params.separator)
         return input_image, label_image
 
     # Data augmentation, patching
@@ -127,25 +131,24 @@ def input_fn(input_data: Union[str, List[str]], params: dict, input_label_dir: s
     elif os.path.isdir(input_data):
         input_case = InputCase.INPUT_DIR
         # TODO: changed by fabian, think about a proper way...
-        use_ms = True
-        if use_ms:
-            input_image_filenames = glob(os.path.join(input_data, '*.jpg'),
-                            recursive=False) + \
-                        glob(os.path.join(input_data, '*.png'),
-                            recursive=False)
-            # this is used for msbin:
-            input_image_filenames = [re.sub(r'_\d\d?', '', f) for f in input_image_filenames]                            
-            # input_image_filenames = [re.sub(r'_\d', '', f) for f in input_image_filenames]
-            input_image_filenames = set(input_image_filenames)
-            print(input_image_filenames)
 
-        else:
+        if not msi_params.channel_ids:
             input_image_filenames = glob(os.path.join(input_data, '**', '*.jpg'),
                                     recursive=True) + \
                                 glob(os.path.join(input_data, '**', '*.png'),
                                     recursive=True)
             print(input_image_filenames)
-        
+        else: 
+            input_image_filenames = glob(os.path.join(input_data, '*.jpg'),
+                recursive=False) + \
+            glob(os.path.join(input_data, '*.png'),
+                recursive=False)
+            # match the last occurence of the separator:
+            r = '(' + msi_params.separator +')(?!.*' + msi_params.separator + ')' + '.*\.png'
+            input_image_filenames = [re.sub(r, '.png', f) for f in input_image_filenames]                            
+            input_image_filenames = set(input_image_filenames)
+            print(input_image_filenames)           
+
         print('Found {} images'.format(len(input_image_filenames)))
 
     elif os.path.isfile(input_data) and \
@@ -221,8 +224,8 @@ def input_fn(input_data: Union[str, List[str]], params: dict, input_label_dir: s
         padded_shapes = {
             # TODO: change by fabian: we need to find something generic:
             # this is used for msbin:
-            'images': base_shape_images + [12] ,
-            # 'images': base_shape_images + [6],
+            # 'images': base_shape_images + [12] ,
+            'images': base_shape_images + [6],
             # This was the original line:
             # 'images': base_shape_images + [3],
             'shapes': [2],
@@ -262,23 +265,22 @@ def input_fn(input_data: Union[str, List[str]], params: dict, input_label_dir: s
 
     return fn
 
+def serving_input_filename(resized_size, channel_ids: list=(), separator: str=[]):
 
-def serving_input_filename(resized_size, use_ms: bool=False):
-    print('test!!!!!!')
     def serving_input_fn():
         print('new serving_input_fn')
         # define placeholder for filename
         filename = tf.placeholder(dtype=tf.string)
 
         # TODO : make it batch-compatible (with Dataset or string input producer)
-                
-        if use_ms:
+
+        if not channel_ids:
+            decoded_image = tf.to_float(tf.image.decode_jpeg(tf.read_file(filename), channels=3,
+                                                try_recover_truncated=True))
+        else:
             first_channel = True
-            # this is used for msbin:
-            for i in range(0, 12):
-            # this is used for ms-tex:
-            # for i in range(2, 8):
-                channelname = tf.regex_replace(filename, '.png', '_' + str(i) + '.png')
+            for id in channel_ids:
+                channelname = tf.regex_replace(filename, '.png', separator + id + '.png')
                 decoded_channel = tf.to_float(tf.image.decode_jpeg(tf.read_file(channelname), channels=1,
                                                             try_recover_truncated=True))
                 if first_channel:
@@ -286,21 +288,7 @@ def serving_input_filename(resized_size, use_ms: bool=False):
                     first_channel = False
                 else:
                     decoded_image = tf.concat([decoded_image, decoded_channel], 2)
-
-            # filename = tf.regex_replace(filename, '.png', '_1.png')
-            # decoded_image = tf.to_float(tf.image.decode_jpeg(tf.read_file(filename), channels=3,
-            #                                              try_recover_truncated=True))
-            # # TODO: change by fabian - fill in here a real MS data loader:
-            # decoded_image = tf.concat([decoded_image, decoded_image], 2)
-        else:        
-            decoded_image = tf.to_float(tf.image.decode_jpeg(tf.read_file(filename), channels=3,
-                                                         try_recover_truncated=True))
-
-        # decoded_image = tf.to_float(tf.image.decode_jpeg(tf.read_file(test), channels=3,
-        #                                                  try_recover_truncated=True))
-        # # TODO: change by fabian - fill in here a real MS data loader:
-        # if use_ms:
-        #     decoded_image = tf.concat([decoded_image, decoded_image], 2)
+                
 
         original_shape = tf.shape(decoded_image)[:2]
 
@@ -324,6 +312,70 @@ def serving_input_filename(resized_size, use_ms: bool=False):
                                                                                            input_from_resized_images})
 
     return serving_input_fn
+
+
+
+# def serving_input_filename(resized_size, use_ms: bool=False):
+
+#     def serving_input_fn():
+#         print('new serving_input_fn')
+#         # define placeholder for filename
+#         filename = tf.placeholder(dtype=tf.string)
+
+#         # TODO : make it batch-compatible (with Dataset or string input producer)
+                
+#         if use_ms:
+#             first_channel = True
+#             # this is used for msbin:
+#             # for i in range(0, 12):
+#             # this is used for ms-tex:
+#             for i in range(1, 7):
+#                 channelname = tf.regex_replace(filename, '.png', '_' + str(i) + '.png')
+#                 decoded_channel = tf.to_float(tf.image.decode_jpeg(tf.read_file(channelname), channels=1,
+#                                                             try_recover_truncated=True))
+#                 if first_channel:
+#                     decoded_image = decoded_channel
+#                     first_channel = False
+#                 else:
+#                     decoded_image = tf.concat([decoded_image, decoded_channel], 2)
+
+#             # filename = tf.regex_replace(filename, '.png', '_1.png')
+#             # decoded_image = tf.to_float(tf.image.decode_jpeg(tf.read_file(filename), channels=3,
+#             #                                              try_recover_truncated=True))
+#             # # TODO: change by fabian - fill in here a real MS data loader:
+#             # decoded_image = tf.concat([decoded_image, decoded_image], 2)
+#         else:        
+#             decoded_image = tf.to_float(tf.image.decode_jpeg(tf.read_file(filename), channels=3,
+#                                                          try_recover_truncated=True))
+
+#         # decoded_image = tf.to_float(tf.image.decode_jpeg(tf.read_file(test), channels=3,
+#         #                                                  try_recover_truncated=True))
+#         # # TODO: change by fabian - fill in here a real MS data loader:
+#         # if use_ms:
+#         #     decoded_image = tf.concat([decoded_image, decoded_image], 2)
+
+#         original_shape = tf.shape(decoded_image)[:2]
+
+#         if resized_size is not None and resized_size > 0:
+#             image = resize_image(decoded_image, resized_size)
+#         else:
+#             image = decoded_image
+
+#         image_batch = image[None]
+#         features = {'images': image_batch, 'original_shape': original_shape}
+
+#         receiver_inputs = {'filename': filename}
+
+#         input_from_resized_images = {'resized_images': image_batch}
+#         input_from_original_image = {'image': decoded_image}
+
+#         return tf.estimator.export.ServingInputReceiver(features, receiver_inputs,
+#                                                         receiver_tensors_alternatives={'from_image':
+#                                                                                            input_from_original_image,
+#                                                                                        'from_resized_images':
+#                                                                                            input_from_resized_images})
+
+#     return serving_input_fn
 
 
 def serving_input_image():

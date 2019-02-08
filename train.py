@@ -35,6 +35,8 @@ def default_config():
     pretrained_model_name = 'resnet50'
     model_params = utils.ModelParams(pretrained_model_name=pretrained_model_name).to_dict()  # Model parameters
     training_params = utils.TrainingParams().to_dict()  # Training parameters
+    msi_params = utils.MSIParams().to_dict()  # Training parameters
+
     use_ms = True
     if prediction_type == utils.PredictionType.CLASSIFICATION:
         assert classes_file is not None
@@ -47,7 +49,7 @@ def default_config():
 
 
 @ex.automain
-def run(train_data, eval_data, model_output_dir, gpu, training_params, _config, use_ms):
+def run(train_data, eval_data, model_output_dir, gpu, training_params, _config, msi_params):
 
     # Create output directory
     if not os.path.isdir(model_output_dir):
@@ -66,6 +68,7 @@ def run(train_data, eval_data, model_output_dir, gpu, training_params, _config, 
         os.makedirs(saved_model_dir)
 
     training_params = utils.TrainingParams.from_dict(training_params)
+    msi_params = utils.MSIParams.from_dict(msi_params)
 
     session_config = tf.ConfigProto()
 
@@ -102,7 +105,7 @@ def run(train_data, eval_data, model_output_dir, gpu, training_params, _config, 
         eval_input, eval_labels_input = get_dirs_or_files(eval_data)
 
     # Configure exporter
-    serving_input_fn = input.serving_input_filename(training_params.input_resized_size, use_ms=True)
+    serving_input_fn = input.serving_input_filename(training_params.input_resized_size, msi_params.channel_ids, msi_params.separator)
     exporter = tf.estimator.BestExporter(serving_input_receiver_fn=serving_input_fn, exports_to_keep=2)
 
     for i in trange(0, training_params.n_epochs, training_params.evaluate_every_epoch, desc='Evaluated epochs'):
@@ -125,15 +128,6 @@ def run(train_data, eval_data, model_output_dir, gpu, training_params, _config, 
                                                             image_summaries=False,
                                                             params=_config,
                                                             num_threads=32))
-            # eval_result = estimator.evaluate(input.input_fn(eval_input,
-            #                            input_label_dir=train_labels_input,
-            #                            num_epochs=training_params.evaluate_every_epoch,
-            #                            batch_size=training_params.batch_size,
-            #                            data_augmentation=training_params.data_augmentation,
-            #                            make_patches=training_params.make_patches,
-            #                            image_summaries=True,
-            #                            params=_config,
-            #                            num_threads=32))
         else:
             eval_result = None
 

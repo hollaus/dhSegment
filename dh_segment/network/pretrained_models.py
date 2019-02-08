@@ -5,9 +5,13 @@ import numpy as np
 
 # _VGG_MEANS = [123.68, 116.78, 103.94]
 # this is used for msbin:
-_VGG_MEANS = [123.68, 116.78, 103.94, 123.68, 116.78, 103.94, 123.68, 116.78, 103.94, 123.68, 116.78, 103.94]
+# _VGG_MEANS = [123.68, 116.78, 103.94, 123.68, 116.78, 103.94, 123.68, 116.78, 103.94, 123.68, 116.78, 103.94]
 # this is used for ms-tex:
 # _VGG_MEANS = [123.68, 116.78, 103.94, 123.68, 116.78, 103.94]
+# this is for ms tex contrast stretched:
+# _VGG_MEANS = [148.87,  168.96,  177.72,  172.88,  156.63, 142.48] 
+# this is for ms tex:
+_VGG_MEANS = [157.05,  142.18,  142.96,  158.58,  168.90,  174.91]
 
 
 def mean_substraction(input_tensor, means=_VGG_MEANS):
@@ -97,10 +101,15 @@ def resnet_v1_50_fn(input_tensor: tf.Tensor, is_training=False, blocks=4, weight
             ]
         else:
             blocks_list = [
-                nets.resnet_v1.resnet_v1_block('block1', base_depth=64, num_units=3, stride=2),
+                nets.resnet_v1.resnet_v1_block('block1', base_depth=64, num_units=3, stride=1),
                 nets.resnet_v1.resnet_v1_block('block2', base_depth=128, num_units=4, stride=2),
                 nets.resnet_v1.resnet_v1_block('block3', base_depth=256, num_units=6, stride=2),
                 nets.resnet_v1.resnet_v1_block('block4', base_depth=512, num_units=3, stride=1),
+                # stride test by hollaus:
+                # nets.resnet_v1.resnet_v1_block('block1', base_depth=64, num_units=3, stride=1),
+                # nets.resnet_v1.resnet_v1_block('block2', base_depth=128, num_units=4, stride=2),
+                # nets.resnet_v1.resnet_v1_block('block3', base_depth=256, num_units=6, stride=1),
+                # nets.resnet_v1.resnet_v1_block('block4', base_depth=512, num_units=3, stride=1),                
             ]
             desired_endpoints = [
                 'resnet_v1_50/conv1',
