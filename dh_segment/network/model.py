@@ -91,7 +91,7 @@ def inference_vgg16(images: tf.Tensor, params: ModelParams, num_classes: int, us
 
 
 def inference_resnet_v1_50(images, params, num_classes, use_batch_norm=False, weight_decay=0.0,
-                           is_training=False) -> tf.Tensor:
+                           is_training=False, mean=None) -> tf.Tensor:
     if use_batch_norm:
         if params.batch_renorm:
             renorm_clipping = {'rmax': 100, 'rmin': 0.1, 'dmax': 1}
@@ -149,7 +149,7 @@ def inference_resnet_v1_50(images, params, num_classes, use_batch_norm=False, we
     blocks_needed = max([i for i, is_needed in enumerate(params.selected_levels_upscaling) if is_needed])
     resnet_net, intermediate_layers = resnet_v1_50_fn(images, is_training=False, blocks=blocks_needed,
                                                       weight_decay=weight_decay, renorm=False,
-                                                      corrected_version=params.correct_resnet_version)
+                                                      corrected_version=params.correct_resnet_version, mean=mean)
 
     # Upsampling
     with tf.variable_scope('upsampling'):

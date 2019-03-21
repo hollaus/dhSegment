@@ -159,7 +159,7 @@ class MSIParams(BaseParams):
     def __init__(self, **kwargs):
         self.separator = kwargs.get('separator', '_')
         self.channel_ids = kwargs.get('channel_ids', ())
-
+        self.mean = kwargs.get('mean', ())
 
 class TrainingParams(BaseParams):
     """Parameters to configure training process

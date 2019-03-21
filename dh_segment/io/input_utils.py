@@ -115,9 +115,14 @@ def load_and_resize_image(filename: str, channels: int, size: int=None, interpol
                                                 try_recover_truncated=True))
         else:
             first_channel = True
+            if len(channel_ids) == 1:
+                channelNum = 3
+            else:             
+                channelNum = 1   
+
             for id in channel_ids:
                 channelname = tf.regex_replace(filename, '.png', separator + id + '.png')
-                decoded_channel = tf.to_float(tf.image.decode_jpeg(tf.read_file(channelname), channels=1,
+                decoded_channel = tf.to_float(tf.image.decode_jpeg(tf.read_file(channelname), channels=channelNum,
                                                             try_recover_truncated=True))
                 if first_channel:
                     decoded_image = decoded_channel

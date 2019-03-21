@@ -1,5 +1,5 @@
 import tensorflow as tf
-from .utils import PredictionType, ModelParams, TrainingParams, \
+from .utils import PredictionType, ModelParams, TrainingParams, MSIParams, \
     class_to_label_image, multiclass_to_label_image
 import numpy as np
 from .network.model import inference_resnet_v1_50, inference_vgg16, inference_u_net
@@ -10,6 +10,8 @@ def model_fn(mode, features, labels, params):
     training_params = TrainingParams.from_dict(params['training_params'])
     prediction_type = params['prediction_type']
     classes_file = params['classes_file']
+    msi_params = MSIParams.from_dict(params['msi_params'])
+    # print('[%s]' % ', '.join(map(str, msi_params.mean)))
 
     input_images = features['images']
 
@@ -34,8 +36,8 @@ def model_fn(mode, features, labels, params):
                                                 model_params.n_classes,
                                                 use_batch_norm=model_params.batch_norm,
                                                 weight_decay=model_params.weight_decay,
-                                                is_training=(mode == tf.estimator.ModeKeys.TRAIN)
-                                                )
+                                                is_training=(mode == tf.estimator.ModeKeys.TRAIN),
+                                                mean=msi_params.mean)
         key_restore_model = 'resnet_v1_50'
     elif model_params.pretrained_model_name == 'unet':
         network_output = inference_u_net(input_images,

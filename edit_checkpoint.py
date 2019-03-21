@@ -6,10 +6,10 @@ import os
 
 flags = tf.app.flags
 flags.DEFINE_string('input_path',
-                    'pretrained_models/model_try/resnet_v1_50.ckpt',
+                    'pretrained_models/resnet_v1_50.ckpt',
                     'path of pretrained_checkpoint')
 flags.DEFINE_string('output_path',
-                    'pretrained_models/model_try/resnet_12_channels.ckpt',
+                    'pretrained_models/msbin_resnet_zero_init.ckpt',
                     'output checkpoint')
 flags.DEFINE_string('feature_extractor', 'resnet_v1_50',
                     'name of first checkpoint')
@@ -52,8 +52,8 @@ if __name__ == '__main__':
     ]
     print('Loading checkpoint...')
 
-    for key in sorted(var_to_shape_map):
-        print("Found variable: {}".format(key))
+    # for key in sorted(var_to_shape_map):
+        # print("Found variable: {}".format(key))
 
     for key in sorted(var_to_shape_map):
         if key not in var_to_edit_names:
@@ -84,11 +84,58 @@ if __name__ == '__main__':
             # raise Exception('For spread edit method, num_input_channels must be divisible by num input channels of checkpoint!')
             num_clones = int(
                 int(FLAGS.num_input_channels) / checkpoint_num_input_channels)
+
+            # print('var_to_edit: ' + var_to_edit)
+            # print(var_to_edit)
+
             if FLAGS.edit_method == 'spread':
                 spreaded_var = var_to_edit / num_clones
             else:
                 spreaded_var = var_to_edit
+            
+            print('spreaded_var: ' + str(spreaded_var.shape))
+            print('num_clones: ' + str(num_clones))
+
             new_var = np.tile(spreaded_var, [1, 1, num_clones, 1])
+            new_var = np.zeros(new_var.shape)
+
+            # new_var = np.tile(spreaded_var, [1, 1, num_clones, 1])
+            # print(new_var.shape)
+            
+            # red_channel = new_var[:,:,0:1,:]
+            # green_channel = new_var[:,:,1:2,:]
+            # blue_channel = new_var[:,:,2:3,:]
+
+            # # vis light:
+            # new_var[:,:,0:1,:] = green_channel
+
+            # # 365 nm:
+            # new_var[:,:,1:2,:] = blue_channel
+            # # 450 nm:
+            # new_var[:,:,2:3,:] = blue_channel
+            # # 465 nm:
+            # new_var[:,:,3:4,:] = blue_channel
+
+            # # 505 nm:
+            # new_var[:,:,4:5,:] = green_channel
+            # # 535 nm:
+            # new_var[:,:,5:6,:] = green_channel
+
+            # # 570 nm:
+            # new_var[:,:,6:7,:] = red_channel
+            # # 625 nm:
+            # new_var[:,:,7:8,:] = red_channel
+            # # 700 nm:
+            # new_var[:,:,8:9,:] = red_channel   
+            # # 780 nm:
+            # new_var[:,:,9:10,:] = red_channel            
+            # # 870 nm:
+            # new_var[:,:,10:11,:] = red_channel            
+            # # 940 nm:
+            # new_var[:,:,11:12,:] = red_channel                           
+            
+            
+            print('msi-shape: ' + str(new_var.shape))
             new_vars.append(tf.Variable(new_var, name=name, dtype=tf.float32))
         elif FLAGS.edit_method == 'random':
             random_shape = list(var_to_edit.shape)

@@ -3,15 +3,12 @@ import tensorflow as tf
 from tensorflow.contrib.slim import nets
 import numpy as np
 
-# _VGG_MEANS = [123.68, 116.78, 103.94]
-# this is used for msbin:
-# _VGG_MEANS = [123.68, 116.78, 103.94, 123.68, 116.78, 103.94, 123.68, 116.78, 103.94, 123.68, 116.78, 103.94]
-# this is used for ms-tex:
-# _VGG_MEANS = [123.68, 116.78, 103.94, 123.68, 116.78, 103.94]
 # this is for ms tex contrast stretched:
 # _VGG_MEANS = [148.87,  168.96,  177.72,  172.88,  156.63, 142.48] 
 # this is for ms tex:
-_VGG_MEANS = [157.05,  142.18,  142.96,  158.58,  168.90,  174.91]
+# _VGG_MEANS = [157.05,  142.18,  142.96,  158.58,  168.90,  174.91]
+# this is for msbin:
+_VGG_MEANS = [111.92,  126.85,  162.19,   172.13,  107.49,  125.1, 97.23, 107.62,  139.31, 156.42, 163.15, 162.77]
 
 
 def mean_substraction(input_tensor, means=_VGG_MEANS):
@@ -56,10 +53,10 @@ def vgg_16_fn(input_tensor: tf.Tensor, scope='vgg_16', blocks=5, weight_decay=0.
 
 
 def resnet_v1_50_fn(input_tensor: tf.Tensor, is_training=False, blocks=4, weight_decay=0.0001,
-                    renorm=True, corrected_version=False) -> tf.Tensor:
+                    renorm=True, corrected_version=False, mean=None) -> tf.Tensor:
     with slim.arg_scope(nets.resnet_v1.resnet_arg_scope(weight_decay=weight_decay, batch_norm_decay=0.999)), \
          slim.arg_scope([layers.batch_norm], renorm_decay=0.95, renorm=renorm):
-        input_tensor = mean_substraction(input_tensor)
+        input_tensor = mean_substraction(input_tensor,mean)
         assert 0 < blocks <= 4
 
         if corrected_version:
@@ -107,7 +104,7 @@ def resnet_v1_50_fn(input_tensor: tf.Tensor, is_training=False, blocks=4, weight
                 nets.resnet_v1.resnet_v1_block('block4', base_depth=512, num_units=3, stride=1),
                 # stride test by hollaus:
                 # nets.resnet_v1.resnet_v1_block('block1', base_depth=64, num_units=3, stride=1),
-                # nets.resnet_v1.resnet_v1_block('block2', base_depth=128, num_units=4, stride=2),
+                # nets.resnet_v1.resnet_v1_block('block2', base_depth=128, num_units=4, stride=1),
                 # nets.resnet_v1.resnet_v1_block('block3', base_depth=256, num_units=6, stride=1),
                 # nets.resnet_v1.resnet_v1_block('block4', base_depth=512, num_units=3, stride=1),                
             ]

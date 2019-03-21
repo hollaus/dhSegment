@@ -129,6 +129,28 @@ def input_fn(input_data: Union[str, List[str]], params: dict, input_label_dir: s
         print('Found {} images'.format(len(input_image_filenames)))
 
     elif os.path.isdir(input_data):
+        # input_case = InputCase.INPUT_DIR
+        # # TODO: changed by fabian, think about a proper way...
+        # use_ms = True
+        # if use_ms:
+        #     input_image_filenames = glob(os.path.join(input_data, '*.jpg'),
+        #                     recursive=False) + \
+        #                 glob(os.path.join(input_data, '*.png'),
+        #                     recursive=False)
+        #     # this is used for msbin:
+        #     input_image_filenames = [re.sub(r'_\d\d?', '', f) for f in input_image_filenames]                            
+        #     # input_image_filenames = [re.sub(r'_\d', '', f) for f in input_image_filenames]
+        #     input_image_filenames = set(input_image_filenames)
+        #     print(input_image_filenames)
+
+        # else:
+        #     input_image_filenames = glob(os.path.join(input_data, '**', '*.jpg'),
+        #                             recursive=True) + \
+        #                         glob(os.path.join(input_data, '**', '*.png'),
+        #                             recursive=True)
+        #     print(input_image_filenames)
+
+        
         input_case = InputCase.INPUT_DIR
         # TODO: changed by fabian, think about a proper way...
 
@@ -147,7 +169,6 @@ def input_fn(input_data: Union[str, List[str]], params: dict, input_label_dir: s
             r = '(' + msi_params.separator +')(?!.*' + msi_params.separator + ')' + '.*\.png'
             input_image_filenames = [re.sub(r, '.png', f) for f in input_image_filenames]                            
             input_image_filenames = set(input_image_filenames)
-            print(input_image_filenames)           
 
         print('Found {} images'.format(len(input_image_filenames)))
 
@@ -191,6 +212,7 @@ def input_fn(input_data: Union[str, List[str]], params: dict, input_label_dir: s
 
     # Tensorflow input_fn
     def fn():
+        
         print(fn)
         if not has_labelled_data:
             encoded_filenames = [f.encode() for f in input_image_filenames]
@@ -220,12 +242,15 @@ def input_fn(input_data: Union[str, List[str]], params: dict, input_label_dir: s
             base_shape_images = list(training_params.patch_shape)
         else:
             base_shape_images = [-1, -1]
+
+        if len(msi_params.channel_ids) == 1:
+            padNum = 3
+        else:
+            padNum = len(msi_params.channel_ids)
+
         # Pad things
         padded_shapes = {
-            # TODO: change by fabian: we need to find something generic:
-            # this is used for msbin:
-            # 'images': base_shape_images + [12] ,
-            'images': base_shape_images + [6],
+            'images': base_shape_images + [padNum],
             # This was the original line:
             # 'images': base_shape_images + [3],
             'shapes': [2],
@@ -279,9 +304,15 @@ def serving_input_filename(resized_size, channel_ids: list=(), separator: str=[]
                                                 try_recover_truncated=True))
         else:
             first_channel = True
+            if len(channel_ids) == 1:
+                channelNum = 3
+            else:             
+                channelNum = 1   
+
             for id in channel_ids:
+
                 channelname = tf.regex_replace(filename, '.png', separator + id + '.png')
-                decoded_channel = tf.to_float(tf.image.decode_jpeg(tf.read_file(channelname), channels=1,
+                decoded_channel = tf.to_float(tf.image.decode_jpeg(tf.read_file(channelname), channels=channelNum,
                                                             try_recover_truncated=True))
                 if first_channel:
                     decoded_image = decoded_channel
